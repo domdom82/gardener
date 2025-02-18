@@ -504,6 +504,8 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 						"all",
 					},
 				},
+				RunAsUser:    ptr.To(int64(65532)),
+				RunAsNonRoot: ptr.To(true),
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				{
