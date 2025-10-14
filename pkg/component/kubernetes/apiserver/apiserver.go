@@ -304,6 +304,12 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	//DEBUG
+	k.values.Autoscaling.Replicas = ptr.To(int32(1))
+	k.values.Autoscaling.MinReplicas = int32(1)
+	k.values.Autoscaling.MaxReplicas = int32(1)
+	//DEBUG END
+
 	if err := k.reconcileHorizontalPodAutoscaler(ctx, horizontalPodAutoscaler, deployment); err != nil {
 		return err
 	}

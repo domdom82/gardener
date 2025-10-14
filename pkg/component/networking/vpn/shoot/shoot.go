@@ -585,6 +585,7 @@ func (v *vpnShoot) podDisruptionBudget() client.Object {
 func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []vpnSecret, secretCA, secretTLSAuth *corev1.Secret) *corev1.PodTemplateSpec {
 	template := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
+			Annotations: v.values.PodAnnotations,
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
 				v1beta1constants.LabelApp:       labelValue,

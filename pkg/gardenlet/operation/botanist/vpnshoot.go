@@ -11,6 +11,7 @@ import (
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
+	"k8s.io/utils/ptr"
 )
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
@@ -35,6 +36,13 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,
 		HighAvailabilityNumberOfShootClients: b.Shoot.VPNHighAvailabilityNumberOfShootClients,
 		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
+		PodAnnotations:                       map[string]string{},
+	}
+
+	if b.Shoot.VPNHighAvailabilityEnabled {
+		if ptr.Deref(b.Shoot.GetInfo().Spec.Networking.Type, "") == "calico" {
+			values.PodAnnotations["cni.projectcalico.org/allowedSourcePrefixes"] = "[\"250.100.100.0/24\"]"
+		}
 	}
 
 	return vpnshoot.New(
