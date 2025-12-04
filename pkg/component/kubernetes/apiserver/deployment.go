@@ -49,6 +49,7 @@ const (
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer     = "kube-apiserver"
 	containerNameVPNPathController = "vpn-path-controller"
+	containerNameVPNBondController = "vpn-bond-controller"
 	containerNameVPNSeedClient     = "vpn-client"
 
 	// EnvoyPortHAVPN is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
@@ -681,6 +682,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedClientContainer(i))
 	}
 	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedPathControllerContainer())
+	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, *k.vpnSeedBondControllerContainer())
 	deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, *k.vpnSeedClientInitContainer())
 
 	hostPathCharDev := corev1.HostPathCharDev
@@ -1024,6 +1026,38 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 						FieldPath: "status.podIP",
 					},
 				},
+			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("10m"),
+				corev1.ResourceMemory: resource.MustParse("5M"),
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			RunAsNonRoot: ptr.To(false),
+			RunAsUser:    ptr.To[int64](0),
+			// group needs to be set to a concrete value to allow unprivileged ping socket when configuring sysctl net.ipv4.ping_group_range
+			RunAsGroup: ptr.To[int64](0),
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"NET_ADMIN"},
+			},
+		},
+		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+	}
+}
+
+func (k *kubeAPIServer) vpnSeedBondControllerContainer() *corev1.Container {
+	return &corev1.Container{
+		Name:            containerNameVPNBondController,
+		Image:           k.values.Images.VPNClient,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/vpn-client", "bond-controller"},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "HA_VPN_SERVERS",
+				Value: strconv.Itoa(k.values.VPN.HighAvailabilityNumberOfSeedServers),
 			},
 		},
 		Resources: corev1.ResourceRequirements{

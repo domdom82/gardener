@@ -616,6 +616,7 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 			template.Spec.Containers = append(template.Spec.Containers, *v.container(secrets, &i))
 		}
 		template.Spec.Containers = append(template.Spec.Containers, *v.tunnelControllerContainer())
+		template.Spec.Containers = append(template.Spec.Containers, *v.bondControllerContainer())
 	}
 
 	return template
@@ -654,6 +655,16 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 		Image:           v.values.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/bin/tunnel-controller"},
+		Env: []corev1.EnvVar{
+			{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("10m"),
@@ -680,6 +691,36 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 			PeriodSeconds:       5,
 			TimeoutSeconds:      2,
 		},
+	}
+}
+
+func (v *vpnShoot) bondControllerContainer() *corev1.Container {
+	return &corev1.Container{
+		Name:            "bond-controller",
+		Image:           v.values.Image,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/vpn-client", "bond-controller"},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "HA_VPN_SERVERS",
+				Value: strconv.Itoa(v.values.HighAvailabilityNumberOfSeedServers),
+			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("10m"),
+				corev1.ResourceMemory: resource.MustParse("5M"),
+			},
+		},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged:               ptr.To(false),
+			AllowPrivilegeEscalation: ptr.To(false),
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"NET_ADMIN"},
+			},
+		},
+		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 	}
 }
 
