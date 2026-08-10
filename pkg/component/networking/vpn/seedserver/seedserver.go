@@ -303,15 +303,19 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Ports: []corev1.ContainerPort{
 						{
-							Name:          "tcp-tunnel",
+							Name:          "udp-tunnel",
 							ContainerPort: OpenVPNPort,
-							Protocol:      corev1.ProtocolTCP,
+							Protocol:      corev1.ProtocolUDP,
 						},
 					},
 					Env: []corev1.EnvVar{
 						{
 							Name:  "IP_FAMILIES",
 							Value: strings.Join(ipFamilies, ","),
+						},
+						{
+							Name:  "PROTOCOL",
+							Value: "udp",
 						},
 						{
 							Name:  "SHOOT_SERVICE_NETWORKS",
@@ -651,6 +655,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
 			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: "vpn-ingress"}},
 			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: new(intstr.FromInt32(metricsPort)), Protocol: new(corev1.ProtocolTCP)}))
 
@@ -660,6 +665,7 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 				Name:       deploymentName,
 				Port:       OpenVPNPort,
 				TargetPort: intstr.FromInt32(OpenVPNPort),
+				Protocol:   corev1.ProtocolUDP,
 			},
 			{
 				Name:       "http-proxy",

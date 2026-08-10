@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+    resources.gardener.cloud/deletion-propagation-on-invalid-update: "Orphan"
+  {{- if .Values.enforceSpreadAcrossHosts }}
+    high-availability-config.resources.gardener.cloud/host-spread: "true"
+  {{- end }}
+  name: udp-mux
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/version: {{ .Values.ingressVersion }}
+{{ toYaml .Values.labels | indent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+{{ toYaml .Values.labels | indent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+{{ toYaml .Values.labels | indent 8 }}
+{{ toYaml .Values.networkPolicyLabels | indent 8 }}
+      annotations: {}
+    spec:
+      serviceAccountName: udp-mux-service-account
+      securityContext:
+        fsGroup: 1337
+        runAsGroup: 1337
+        runAsNonRoot: true
+        runAsUser: 1337
+      containers:
+        - name: udp-mux
+          image: {{ .Values.image }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              drop:
+              - ALL
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+          ports:
+          {{- range .Values.ports }}
+          - containerPort: {{ .targetPort }}
+            protocol: UDP
+          {{- end }}
+          args: []
+         # readinessProbe:
+         #   failureThreshold: 30
+         #   httpGet:
+         #     path: /healthz/ready
+         #     port: 15021
+         #     scheme: HTTP
+         #   initialDelaySeconds: 1
+         #   periodSeconds: 2
+         #   successThreshold: 1
+         #   timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: {{ .Values.cpuRequests }}
+              memory: 600Mi
+          env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.nodeName
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: INSTANCE_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.hostIP
+          - name: SERVICE_ACCOUNT
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: spec.serviceAccountName
+          - name: TRUST_DOMAIN
+            value: "cluster.local"
+          volumeMounts:
+          - name: udp-mux-certs
+            mountPath: "/etc/udp-mux/udp-mux-certs"
+            readOnly: true
+          - name: udp-mux-ca-certs
+            mountPath: "/etc/udp-mux/udp-mux-ca-certs"
+            readOnly: true
+      volumes:
+      - name: udp-mux-certs
+        secret:
+          secretName: "udp-mux-certs"
+          optional: true
+      - name: udp-mux-ca-certs
+        secret:
+          secretName: "udp-mux-ca-certs"
+          optional: true
+      priorityClassName: {{ .Values.priorityClassName }}

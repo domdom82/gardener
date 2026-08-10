@@ -1,0 +1,35 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: udp-mux
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/version: {{ .Values.ingressVersion }}
+{{ .Values.labels | toYaml | indent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: udp-mux
+  minReplicas: {{ .Values.minReplicas }}
+  maxReplicas: {{ .Values.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: AverageValue
+        averageValue: "{{ .Values.hpaCPUAverageValue }}"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 1800
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 1800
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 60

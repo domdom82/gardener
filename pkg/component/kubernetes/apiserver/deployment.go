@@ -635,7 +635,8 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 		serviceName := fmt.Sprintf("%s-%d", vpnseedserver.ServiceName, i)
 
 		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
-			gardenerutils.NetworkPolicyLabel(serviceName, vpnseedserver.OpenVPNPort): v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabel(serviceName, vpnseedserver.OpenVPNPort):    v1beta1constants.LabelNetworkPolicyAllowed,
+			gardenerutils.NetworkPolicyLabelUDP(serviceName, vpnseedserver.OpenVPNPort): v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	}
 
@@ -918,6 +919,10 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 			{
 				Name:  "ENDPOINT",
 				Value: fmt.Sprintf("vpn-seed-server-%d", index),
+			},
+			{
+				Name:  "PROTOCOL",
+				Value: "udp",
 			},
 			{
 				Name:  "SHOOT_POD_NETWORKS",

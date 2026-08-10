@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.serviceName }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    networking.resources.gardener.cloud/from-world-to-ports: '[{"port":1194,"protocol":"UDP"}]'
+    networking.resources.gardener.cloud/namespace-selectors: '[{"matchLabels":{"gardener.cloud/role":"extension"}},{"matchLabels":{"gardener.cloud/role":"shoot"}},{"matchLabels":{"kubernetes.io/metadata.name":"garden"}}]'
+{{- if .Values.annotations }}
+{{ .Values.annotations | toYaml | indent 4 }}
+{{- end }}
+  labels:
+    app.kubernetes.io/version: {{ .Values.udpmuxVersion }}
+    metrics-scrape-target: "true"
+{{ .Values.labels | toYaml | indent 4 }}
+spec:
+  type: {{ .Values.serviceType }}
+  selector:
+{{ .Values.labels  | toYaml | indent 4 }}
+  ports:
+{{- if .Values.ports }}
+{{ toYaml .Values.ports | indent 2 }}
+{{- end }}
+{{- with .Values.loadBalancerClass }}
+  loadBalancerClass: {{ . | quote }}
+{{- end }}
+{{- if .Values.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.externalTrafficPolicy }}
+{{- end }}
+{{- if eq .Values.dualStack true }}
+  ipFamilies:
+  - IPv6
+  - IPv4
+  ipFamilyPolicy: PreferDualStack
+{{- end }}

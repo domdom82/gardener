@@ -27,18 +27,25 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 		return nil, err
 	}
 
+	imageUdpProxy, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameUdpProxy, imagevectorutils.RuntimeVersion(b.ShootVersion()), imagevectorutils.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return nil, err
+	}
+
 	return vpnshoot.New(
 		b.SeedClientSet.Client(),
 		b.Shoot.ControlPlaneNamespace,
 		b.SecretsManager,
 		vpnshoot.Values{
 			Image:             image.String(),
+			ImageUdpProxy:     imageUdpProxy.String(),
 			VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
 			VPAUpdateDisabled: b.Shoot.VPNVPAUpdateDisabled,
 			ReversedVPN: vpnshoot.ReversedVPNValues{
-				Header:     "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.ControlPlaneNamespace + ".svc.cluster.local",
-				Endpoint:   b.outOfClusterAPIServerFQDN(),
-				IPFamilies: b.Shoot.GetInfo().Spec.Networking.IPFamilies,
+				Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.ControlPlaneNamespace + ".svc.cluster.local",
+				Destination: vpnseedserver.ServiceName + "." + b.Shoot.ControlPlaneNamespace + ".svc.cluster.local" + ":1194",
+				Endpoint:    b.outOfClusterAPIServerFQDN(),
+				IPFamilies:  b.Shoot.GetInfo().Spec.Networking.IPFamilies,
 			},
 			HighAvailabilityEnabled:              b.Shoot.VPNHighAvailabilityEnabled,
 			HighAvailabilityNumberOfSeedServers:  b.Shoot.VPNHighAvailabilityNumberOfSeedServers,

@@ -68,6 +68,8 @@ const (
 type ReversedVPNValues struct {
 	// Header is the header value for the ReversedVPN.
 	Header string
+	// Destination is the new UDP proxy destination for the ReversedVPN.
+	Destination string
 	// Endpoint is the endpoint for the ReversedVPN.
 	Endpoint string
 	// IPFamilies are the IPFamilies of the shoot.
@@ -88,6 +90,8 @@ type NetworkValues struct {
 type Values struct {
 	// Image is the container image used for vpnShoot.
 	Image string
+	// ImageUdpProxy is the container image for the udp proxy used for the vpnShoot.
+	ImageUdpProxy string
 	// PodAnnotations is the set of additional annotations to be used for the pods.
 	PodAnnotations map[string]string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
@@ -612,9 +616,11 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 
 	if !v.values.HighAvailabilityEnabled {
 		template.Spec.Containers = []corev1.Container{*v.container(secrets, nil)}
+		template.Spec.Containers = append(template.Spec.Containers, *v.udpProxyContainer(nil))
 	} else {
 		for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 			template.Spec.Containers = append(template.Spec.Containers, *v.container(secrets, &i))
+			template.Spec.Containers = append(template.Spec.Containers, *v.udpProxyContainer(&i))
 		}
 		template.Spec.Containers = append(template.Spec.Containers, *v.tunnelControllerContainer())
 	}
@@ -702,6 +708,43 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 	}
 }
 
+func (v *vpnShoot) udpProxyContainer(index *int) *corev1.Container {
+
+	endpointAddr := v.indexedReversedAddr(index)
+	name := "udp-proxy"
+	port := 7070
+	if index != nil {
+		name = fmt.Sprintf("%s-s%d", name, *index)
+		port += *index
+	}
+	listenAddr := fmt.Sprintf(":%d", port)
+
+	//DEBUG
+	muxAddr := "k8s-vpningre-vpningre-7adbfcf927-7df62737e3e0a4eb.elb.eu-west-1.amazonaws.com:1194"
+	//DEBUG END
+
+	return &corev1.Container{
+		Name:            name,
+		Image:           v.values.ImageUdpProxy,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/udp-proxy", "--protocol", "v2", "--listenAddr", listenAddr, "--muxAddr", muxAddr, "--endpointAddr", endpointAddr},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse("100Mi"),
+			},
+		},
+		Env: []corev1.EnvVar{},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged:               new(false),
+			AllowPrivilegeEscalation: new(false),
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"NET_ADMIN"},
+			},
+		},
+	}
+}
+
 func (v *vpnShoot) deployment(labels map[string]string, template *corev1.PodTemplateSpec) *appsv1.Deployment {
 	var (
 		intStrMax  = intstr.FromString("100%")
@@ -767,6 +810,13 @@ func (v *vpnShoot) indexedReversedHeader(index *int) string {
 	return strings.Replace(v.values.ReversedVPN.Header, "vpn-seed-server", fmt.Sprintf("vpn-seed-server-%d", *index), 1)
 }
 
+func (v *vpnShoot) indexedReversedAddr(index *int) string {
+	if index == nil {
+		return v.values.ReversedVPN.Destination
+	}
+	return strings.Replace(v.values.ReversedVPN.Destination, "vpn-seed-server", fmt.Sprintf("vpn-seed-server-%d", *index), 1)
+}
+
 func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 	var (
 		envVariables []corev1.EnvVar
@@ -781,8 +831,8 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			Value: strings.Join(ipFamilies, ","),
 		},
 		corev1.EnvVar{
-			Name:  "ENDPOINT",
-			Value: v.values.ReversedVPN.Endpoint,
+			Name:  "PROTOCOL",
+			Value: "udp",
 		},
 		corev1.EnvVar{
 			Name:  "OPENVPN_PORT",
@@ -818,7 +868,10 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 		},
 	)
 
+	port := 7070
+
 	if index != nil {
+		port += *index
 		envVariables = append(envVariables,
 			[]corev1.EnvVar{
 				{
@@ -839,6 +892,12 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 				},
 			}...)
 	}
+
+	envVariables = append(envVariables,
+		corev1.EnvVar{
+			Name:  "ENDPOINT",
+			Value: fmt.Sprintf("localhost %d", port),
+		})
 
 	if v.values.AutoMTU != nil {
 		envVariables = append(envVariables, corev1.EnvVar{

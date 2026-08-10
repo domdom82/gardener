@@ -1,0 +1,24 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: udp-mux
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/version: {{ .Values.ingressVersion }}
+{{ .Values.labels | toYaml | indent 4 }}
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: udp-mux
+  updatePolicy:
+    updateMode: InPlaceOrRecreate
+  resourcePolicy:
+    containerPolicies:
+    - containerName: udp-mux
+      controlledValues: RequestsOnly
+      controlledResources:
+      - cpu
+      - memory
+    - containerName: '*'
+      mode: "Off"
