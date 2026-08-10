@@ -1,0 +1,30 @@
+labels:
+  app: udp-mux
+networkPolicyLabels:
+  to-target: allowed
+annotations: {}
+image: to-be-injected-by-imagevector
+trustDomain: cluster.local
+deployNamespace: false
+priorityClassName: gardener-system-critical
+serviceType: LoadBalancer
+# loadBalancerIP: 1.2.3.4
+#ports: []
+ports:
+- name: vpn
+  port: 1194
+  targetPort: 8080
+#
+#- name: tcp
+#  port: 8443
+#  targetPort: 8443
+serviceName: udp-mux
+#loadBalancerClass: non-default-loadbalancer-class
+externalTrafficPolicy: Cluster
+dualStack: false
+replicas: 2
+cpuRequests: 300m
+minReplicas: 2
+maxReplicas: 9
+kubernetesVersion: "1.33.0"
+udpmuxVersion: "0.1.0"

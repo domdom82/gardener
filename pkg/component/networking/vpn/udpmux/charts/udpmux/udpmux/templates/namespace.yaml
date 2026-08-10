@@ -1,0 +1,8 @@
+{{- if .Values.deployNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    gardener.cloud/role: udp-mux-ingress
+{{- end }}

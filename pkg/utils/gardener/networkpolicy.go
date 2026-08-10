@@ -73,6 +73,13 @@ func NetworkPolicyLabel(serviceName string, port int32) string {
 	return labelKey
 }
 
+// NetworkPolicyLabelUDP returns the network policy label for a component initiating the connection to a service with the
+// given name and UDP port.
+func NetworkPolicyLabelUDP(serviceName string, port int32) string {
+	labelKey, _ := ShortenNetworkPolicyLabelKeyIfTooLong(fmt.Sprintf("%sto-%s-udp-%d", resourcesv1alpha1.NetworkPolicyLabelKeyPrefix, serviceName, port))
+	return labelKey
+}
+
 // ShortenNetworkPolicyLabelKeyIfTooLong shortens the given label key if it exceeds the maximum length for Kubernetes label keys.
 func ShortenNetworkPolicyLabelKeyIfTooLong(labelKey string) (string, bool) {
 	const maxLabelKeyLength = 63

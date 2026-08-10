@@ -155,4 +155,6 @@ const (
 	ContainerImageNameVpnClient = "vpn-client"
 	// ContainerImageNameVpnServer is a constant for an image in the image vector with name 'vpn-server'.
 	ContainerImageNameVpnServer = "vpn-server"
+	// ContainerImageNameUdpProxy is a constant for an image in the image vector with name 'udp-proxy'.
+	ContainerImageNameUdpProxy = "udp-proxy"
 )
