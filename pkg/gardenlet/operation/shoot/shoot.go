@@ -289,6 +289,9 @@ func (b *Builder) Build(ctx context.Context, seedClientSet kubernetes.Interface,
 	if autoMTU, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneVPNAutoMTU]); err == nil {
 		shoot.VPNAutoMTU = &autoMTU
 	}
+	if udpEnabled, err := strconv.ParseBool(shoot.GetInfo().GetAnnotations()[v1beta1constants.ShootAlphaControlPlaneVPNEnableUDP]); err == nil {
+		shoot.VPNUDPEnabled = udpEnabled
+	}
 
 	shoot.WantsClusterAutoscaler = v1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 

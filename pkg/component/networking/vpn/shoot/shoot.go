@@ -68,8 +68,13 @@ const (
 type ReversedVPNValues struct {
 	// Header is the header value for the ReversedVPN.
 	Header string
+	// Destination is the new UDP proxy destination for the ReversedVPN.
+	Destination string
 	// Endpoint is the endpoint for the ReversedVPN.
 	Endpoint string
+	// UDPEndpoint is the hostname or IP of the vpn-ingress LoadBalancer Service.
+	// Used as --muxAddr for the udp-proxy sidecar when UDPEnabled is true.
+	UDPEndpoint string
 	// IPFamilies are the IPFamilies of the shoot.
 	IPFamilies []gardencorev1beta1.IPFamily
 }
@@ -88,6 +93,8 @@ type NetworkValues struct {
 type Values struct {
 	// Image is the container image used for vpnShoot.
 	Image string
+	// ImageUdpProxy is the container image for the udp proxy used for the vpnShoot.
+	ImageUdpProxy string
 	// PodAnnotations is the set of additional annotations to be used for the pods.
 	PodAnnotations map[string]string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
@@ -109,6 +116,9 @@ type Values struct {
 	// AutoMTU enables automatic MTU configuration for the VPN connection.
 	// When nil, the OPENVPN_AUTO_MTU environment variable is not set.
 	AutoMTU *bool
+	// UDPEnabled enables the UDP-based VPN transport via the udp-mux ingress Deployment.
+	// When enabled, the udp-proxy sidecar is added to the pod and UDP env vars are set.
+	UDPEnabled bool
 }
 
 // Interface contains functions for a VPNShoot deployer.
@@ -612,9 +622,15 @@ func (v *vpnShoot) podTemplate(serviceAccount *corev1.ServiceAccount, secrets []
 
 	if !v.values.HighAvailabilityEnabled {
 		template.Spec.Containers = []corev1.Container{*v.container(secrets, nil)}
+		if v.values.UDPEnabled {
+			template.Spec.Containers = append(template.Spec.Containers, *v.udpProxyContainer(nil))
+		}
 	} else {
 		for i := 0; i < v.values.HighAvailabilityNumberOfSeedServers; i++ {
 			template.Spec.Containers = append(template.Spec.Containers, *v.container(secrets, &i))
+			if v.values.UDPEnabled {
+				template.Spec.Containers = append(template.Spec.Containers, *v.udpProxyContainer(&i))
+			}
 		}
 		template.Spec.Containers = append(template.Spec.Containers, *v.tunnelControllerContainer())
 	}
@@ -702,6 +718,40 @@ func (v *vpnShoot) tunnelControllerContainer() *corev1.Container {
 	}
 }
 
+func (v *vpnShoot) udpProxyContainer(index *int) *corev1.Container {
+
+	endpointAddr := v.indexedReversedAddr(index)
+	name := "udp-proxy"
+	port := 7070
+	if index != nil {
+		name = fmt.Sprintf("%s-s%d", name, *index)
+		port += *index
+	}
+	listenAddr := fmt.Sprintf(":%d", port)
+	muxAddr := fmt.Sprintf("%s:%d", v.values.ReversedVPN.UDPEndpoint, vpnseedserver.UDPProxyGatewayPort)
+
+	return &corev1.Container{
+		Name:            name,
+		Image:           v.values.ImageUdpProxy,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/udp-proxy", "--protocol", "v1", "--listenAddr", listenAddr, "--muxAddr", muxAddr, "--endpointAddr", endpointAddr},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse("100Mi"),
+			},
+		},
+		Env: []corev1.EnvVar{},
+		SecurityContext: &corev1.SecurityContext{
+			Privileged:               new(false),
+			AllowPrivilegeEscalation: new(false),
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"NET_ADMIN"},
+			},
+		},
+	}
+}
+
 func (v *vpnShoot) deployment(labels map[string]string, template *corev1.PodTemplateSpec) *appsv1.Deployment {
 	var (
 		intStrMax  = intstr.FromString("100%")
@@ -767,6 +817,13 @@ func (v *vpnShoot) indexedReversedHeader(index *int) string {
 	return strings.Replace(v.values.ReversedVPN.Header, "vpn-seed-server", fmt.Sprintf("vpn-seed-server-%d", *index), 1)
 }
 
+func (v *vpnShoot) indexedReversedAddr(index *int) string {
+	if index == nil {
+		return v.values.ReversedVPN.Destination
+	}
+	return strings.Replace(v.values.ReversedVPN.Destination, "vpn-seed-server", fmt.Sprintf("vpn-seed-server-%d", *index), 1)
+}
+
 func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 	var (
 		envVariables []corev1.EnvVar
@@ -780,10 +837,20 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 			Name:  "IP_FAMILIES",
 			Value: strings.Join(ipFamilies, ","),
 		},
-		corev1.EnvVar{
-			Name:  "ENDPOINT",
-			Value: v.values.ReversedVPN.Endpoint,
-		},
+	)
+	if v.values.UDPEnabled {
+		envVariables = append(envVariables,
+			corev1.EnvVar{
+				Name:  "PROTOCOL",
+				Value: "udp",
+			},
+			corev1.EnvVar{
+				Name:  "UDPM_VERSION",
+				Value: "v1",
+			},
+		)
+	}
+	envVariables = append(envVariables,
 		corev1.EnvVar{
 			Name:  "OPENVPN_PORT",
 			Value: strconv.Itoa(vpnseedserver.HTTPProxyGatewayPort),
@@ -818,7 +885,10 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 		},
 	)
 
+	port := 7070
+
 	if index != nil {
+		port += *index
 		envVariables = append(envVariables,
 			[]corev1.EnvVar{
 				{
@@ -838,6 +908,20 @@ func (v *vpnShoot) getEnvVars(index *int) []corev1.EnvVar {
 					},
 				},
 			}...)
+	}
+
+	if v.values.UDPEnabled {
+		envVariables = append(envVariables,
+			corev1.EnvVar{
+				Name:  "ENDPOINT",
+				Value: fmt.Sprintf("localhost %d", port),
+			})
+	} else {
+		envVariables = append(envVariables,
+			corev1.EnvVar{
+				Name:  "ENDPOINT",
+				Value: v.values.ReversedVPN.Endpoint,
+			})
 	}
 
 	if v.values.AutoMTU != nil {

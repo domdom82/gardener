@@ -48,6 +48,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		// Pod/service/node network CIDRs are set on deployment to handle dynamic network CIDRs
 		vpnConfig.IPFamilies = b.Seed.GetInfo().Spec.Networks.IPFamilies
 		vpnConfig.AutoMTU = b.Shoot.VPNAutoMTU
+		vpnConfig.UDPEnabled = b.Shoot.VPNUDPEnabled
 	}
 
 	return shared.NewKubeAPIServer(

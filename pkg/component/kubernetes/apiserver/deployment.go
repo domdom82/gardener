@@ -634,9 +634,13 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 	for i := 0; i < k.values.VPN.HighAvailabilityNumberOfSeedServers; i++ {
 		serviceName := fmt.Sprintf("%s-%d", vpnseedserver.ServiceName, i)
 
-		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
+		labels := map[string]string{
 			gardenerutils.NetworkPolicyLabel(serviceName, vpnseedserver.OpenVPNPort): v1beta1constants.LabelNetworkPolicyAllowed,
-		})
+		}
+		if k.values.VPN.UDPEnabled {
+			labels[gardenerutils.NetworkPolicyLabelUDP(serviceName, vpnseedserver.OpenVPNPort)] = v1beta1constants.LabelNetworkPolicyAllowed
+		}
+		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, labels)
 	}
 
 	// Only inject Envoy Proxy if Seed pods and Shoot networks overlap. Seed pods like Kube-Apiserver(s) talk to shoot pods/nodes/services with potentially clashing IPs.
@@ -910,52 +914,60 @@ func (k *kubeAPIServer) vpnSeedClientInitContainer() *corev1.Container {
 }
 
 func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
+	env := []corev1.EnvVar{
+		{
+			Name:  "ENDPOINT",
+			Value: fmt.Sprintf("vpn-seed-server-%d", index),
+		},
+		{
+			Name:  "SHOOT_POD_NETWORKS",
+			Value: netutils.JoinByComma(k.values.VPN.PodNetworkCIDRs),
+		},
+		{
+			Name:  "SHOOT_SERVICE_NETWORKS",
+			Value: netutils.JoinByComma(k.values.ServiceNetworkCIDRs),
+		},
+		{
+			Name:  "SHOOT_NODE_NETWORKS",
+			Value: netutils.JoinByComma(k.values.VPN.NodeNetworkCIDRs),
+		},
+		{
+			Name:  "SEED_POD_NETWORK",
+			Value: k.values.VPN.SeedPodNetwork.String(),
+		},
+		{
+			Name:  "VPN_SERVER_INDEX",
+			Value: strconv.Itoa(index),
+		},
+		{
+			Name:  "IS_HA",
+			Value: "true",
+		},
+		{
+			Name:  "HA_VPN_SERVERS",
+			Value: strconv.Itoa(k.values.VPN.HighAvailabilityNumberOfSeedServers),
+		},
+		{
+			Name:  "HA_VPN_CLIENTS",
+			Value: strconv.Itoa(k.values.VPN.HighAvailabilityNumberOfShootClients),
+		},
+		{
+			Name:  "OPENVPN_PORT",
+			Value: strconv.Itoa(vpnseedserver.OpenVPNPort),
+		},
+	}
+	if k.values.VPN.UDPEnabled {
+		env = append(env,
+			corev1.EnvVar{Name: "PROTOCOL", Value: "udp"},
+			corev1.EnvVar{Name: "UDPM_VERSION", Value: "v1"},
+		)
+	}
+
 	container := &corev1.Container{
 		Name:            fmt.Sprintf("%s-%d", containerNameVPNSeedClient, index),
 		Image:           k.values.Images.VPNClient,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Env: []corev1.EnvVar{
-			{
-				Name:  "ENDPOINT",
-				Value: fmt.Sprintf("vpn-seed-server-%d", index),
-			},
-			{
-				Name:  "SHOOT_POD_NETWORKS",
-				Value: netutils.JoinByComma(k.values.VPN.PodNetworkCIDRs),
-			},
-			{
-				Name:  "SHOOT_SERVICE_NETWORKS",
-				Value: netutils.JoinByComma(k.values.ServiceNetworkCIDRs),
-			},
-			{
-				Name:  "SHOOT_NODE_NETWORKS",
-				Value: netutils.JoinByComma(k.values.VPN.NodeNetworkCIDRs),
-			},
-			{
-				Name:  "SEED_POD_NETWORK",
-				Value: k.values.VPN.SeedPodNetwork.String(),
-			},
-			{
-				Name:  "VPN_SERVER_INDEX",
-				Value: strconv.Itoa(index),
-			},
-			{
-				Name:  "IS_HA",
-				Value: "true",
-			},
-			{
-				Name:  "HA_VPN_SERVERS",
-				Value: strconv.Itoa(k.values.VPN.HighAvailabilityNumberOfSeedServers),
-			},
-			{
-				Name:  "HA_VPN_CLIENTS",
-				Value: strconv.Itoa(k.values.VPN.HighAvailabilityNumberOfShootClients),
-			},
-			{
-				Name:  "OPENVPN_PORT",
-				Value: strconv.Itoa(vpnseedserver.OpenVPNPort),
-			},
-		},
+		Env:             env,
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("10m"),

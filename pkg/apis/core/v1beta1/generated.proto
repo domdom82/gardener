@@ -3098,6 +3098,20 @@ message SeedSettingLoadBalancerServices {
   // Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.
   // +optional
   optional string class = 6;
+
+  // UDPIngress configures the load balancer for the vpn-ingress UDP gateway service.
+  // When unset, the global load balancer settings are used as fallback.
+  // +optional
+  optional SeedSettingLoadBalancerServicesUDPIngress udpIngress = 7;
+}
+
+// SeedSettingLoadBalancerServicesUDPIngress contains load balancer settings for the
+// vpn-ingress UDP gateway service. When unset, the global loadBalancerServices settings are used as fallback.
+message SeedSettingLoadBalancerServicesUDPIngress {
+  // Annotations is a map of annotations that will be injected/merged into the vpn-ingress load balancer
+  // service object. Overrides spec.settings.loadBalancerServices.annotations for this service.
+  // +optional
+  map<string, string> annotations = 1;
 }
 
 // SeedSettingLoadBalancerServicesZonalIngress controls the deployment of ingress gateways per availability zone.

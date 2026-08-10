@@ -395,6 +395,10 @@ type SeedSettingLoadBalancerServices struct {
 	// Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.
 	// +optional
 	Class *string `json:"class,omitempty" protobuf:"bytes,6,opt,name=class"`
+	// UDPIngress configures the load balancer for the vpn-ingress UDP gateway service.
+	// When unset, the global load balancer settings are used as fallback.
+	// +optional
+	UDPIngress *SeedSettingLoadBalancerServicesUDPIngress `json:"udpIngress,omitempty" protobuf:"bytes,7,opt,name=udpIngress"`
 }
 
 // SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
@@ -434,6 +438,15 @@ type SeedSettingLoadBalancerServicesZonalIngress struct {
 	// See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zonal-ingress.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty" protobuf:"bytes,1,opt,name=enabled"`
+}
+
+// SeedSettingLoadBalancerServicesUDPIngress contains load balancer settings for the
+// vpn-ingress UDP gateway service. When unset, the global loadBalancerServices settings are used as fallback.
+type SeedSettingLoadBalancerServicesUDPIngress struct {
+	// Annotations is a map of annotations that will be injected/merged into the vpn-ingress load balancer
+	// service object. Overrides spec.settings.loadBalancerServices.annotations for this service.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,1,rep,name=annotations"`
 }
 
 // SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the

@@ -172,8 +172,8 @@ images:
     targetVersion: "1.32.x"
   - name: vpn-server
     sourceRepository: github.com/gardener/vpn2
-    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-server
-    tag: "0.51.0"
+    repository: europe-docker.pkg.dev/gardener-project/test-public/domdom82/vpn-server
+    tag: "0.53.0-dev32"
   # OpenTelemetry
   - name: opentelemetry-operator
     sourceRepository: github.com/open-telemetry/opentelemetry-operator
@@ -481,8 +481,16 @@ images:
   # Shoot core addons
   - name: vpn-client
     sourceRepository: github.com/gardener/vpn2
-    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/vpn-client
-    tag: "0.51.0"
+    repository: europe-docker.pkg.dev/gardener-project/test-public/domdom82/vpn-client
+    tag: "0.53.0-dev32"
+  - name: udp-proxy
+    sourceRepository: github.com/domdom82/udpmux
+    repository: dominikfroehlich220/udp-proxy
+    tag: "0.1.0-dev13"
+  - name: udp-mux
+    sourceRepository: github.com/domdom82/udpmux
+    repository: dominikfroehlich220/udp-mux
+    tag: "0.1.0-dev13"
   - name: coredns
     sourceRepository: github.com/coredns/coredns
     repository: registry.k8s.io/coredns/coredns

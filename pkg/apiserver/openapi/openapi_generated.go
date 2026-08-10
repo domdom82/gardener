@@ -218,6 +218,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		v1beta1.SeedSettingExcessCapacityReservation{}.OpenAPIModelName():         schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
 		v1beta1.SeedSettingExcessCapacityReservationConfig{}.OpenAPIModelName():   schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservationConfig(ref),
 		v1beta1.SeedSettingLoadBalancerServices{}.OpenAPIModelName():              schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
+		v1beta1.SeedSettingLoadBalancerServicesUDPIngress{}.OpenAPIModelName():    schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesUDPIngress(ref),
 		v1beta1.SeedSettingLoadBalancerServicesZonalIngress{}.OpenAPIModelName():  schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZonalIngress(ref),
 		v1beta1.SeedSettingLoadBalancerServicesZones{}.OpenAPIModelName():         schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesZones(ref),
 		v1beta1.SeedSettingPersistentVolumeClaimAutoscaler{}.OpenAPIModelName():   schema_pkg_apis_core_v1beta1_SeedSettingPersistentVolumeClaimAutoscaler(ref),
@@ -8987,11 +8988,45 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref common.Ref
 							Format:      "",
 						},
 					},
+					"udpIngress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UDPIngress configures the load balancer for the vpn-ingress UDP gateway service. When unset, the global load balancer settings are used as fallback.",
+							Ref:         ref(v1beta1.SeedSettingLoadBalancerServicesUDPIngress{}.OpenAPIModelName()),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			v1beta1.LoadBalancerServicesProxyProtocol{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServicesZonalIngress{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServicesZones{}.OpenAPIModelName()},
+			v1beta1.LoadBalancerServicesProxyProtocol{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServicesUDPIngress{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServicesZonalIngress{}.OpenAPIModelName(), v1beta1.SeedSettingLoadBalancerServicesZones{}.OpenAPIModelName()},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServicesUDPIngress(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingLoadBalancerServicesUDPIngress contains load balancer settings for the vpn-ingress UDP gateway service. When unset, the global loadBalancerServices settings are used as fallback.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"annotations": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Annotations is a map of annotations that will be injected/merged into the vpn-ingress load balancer service object. Overrides spec.settings.loadBalancerServices.annotations for this service.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

@@ -388,6 +388,10 @@ func (m *SeedSettingExcessCapacityReservationConfig) Reset() {
 
 func (m *SeedSettingLoadBalancerServices) Reset() { *m = SeedSettingLoadBalancerServices{} }
 
+func (m *SeedSettingLoadBalancerServicesUDPIngress) Reset() {
+	*m = SeedSettingLoadBalancerServicesUDPIngress{}
+}
+
 func (m *SeedSettingLoadBalancerServicesZonalIngress) Reset() {
 	*m = SeedSettingLoadBalancerServicesZonalIngress{}
 }
@@ -10331,6 +10335,18 @@ func (m *SeedSettingLoadBalancerServices) MarshalToSizedBuffer(dAtA []byte) (int
 	_ = i
 	var l int
 	_ = l
+	if m.UDPIngress != nil {
+		{
+			size, err := m.UDPIngress.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
+	}
 	if m.Class != nil {
 		i -= len(*m.Class)
 		copy(dAtA[i:], *m.Class)
@@ -10383,6 +10399,53 @@ func (m *SeedSettingLoadBalancerServices) MarshalToSizedBuffer(dAtA []byte) (int
 		i--
 		dAtA[i] = 0x12
 	}
+	if len(m.Annotations) > 0 {
+		keysForAnnotations := make([]string, 0, len(m.Annotations))
+		for k := range m.Annotations {
+			keysForAnnotations = append(keysForAnnotations, string(k))
+		}
+		sort.Strings(keysForAnnotations)
+		for iNdEx := len(keysForAnnotations) - 1; iNdEx >= 0; iNdEx-- {
+			v := m.Annotations[string(keysForAnnotations[iNdEx])]
+			baseI := i
+			i -= len(v)
+			copy(dAtA[i:], v)
+			i = encodeVarintGenerated(dAtA, i, uint64(len(v)))
+			i--
+			dAtA[i] = 0x12
+			i -= len(keysForAnnotations[iNdEx])
+			copy(dAtA[i:], keysForAnnotations[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(keysForAnnotations[iNdEx])))
+			i--
+			dAtA[i] = 0xa
+			i = encodeVarintGenerated(dAtA, i, uint64(baseI-i))
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SeedSettingLoadBalancerServicesUDPIngress) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SeedSettingLoadBalancerServicesUDPIngress) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SeedSettingLoadBalancerServicesUDPIngress) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
 	if len(m.Annotations) > 0 {
 		keysForAnnotations := make([]string, 0, len(m.Annotations))
 		for k := range m.Annotations {
@@ -17423,6 +17486,27 @@ func (m *SeedSettingLoadBalancerServices) Size() (n int) {
 		l = len(*m.Class)
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if m.UDPIngress != nil {
+		l = m.UDPIngress.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	return n
+}
+
+func (m *SeedSettingLoadBalancerServicesUDPIngress) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Annotations) > 0 {
+		for k, v := range m.Annotations {
+			_ = k
+			_ = v
+			mapEntrySize := 1 + len(k) + sovGenerated(uint64(len(k))) + 1 + len(v) + sovGenerated(uint64(len(v)))
+			n += mapEntrySize + 1 + sovGenerated(uint64(mapEntrySize))
+		}
+	}
 	return n
 }
 
@@ -21206,6 +21290,27 @@ func (this *SeedSettingLoadBalancerServices) String() string {
 		`ProxyProtocol:` + strings.Replace(this.ProxyProtocol.String(), "LoadBalancerServicesProxyProtocol", "LoadBalancerServicesProxyProtocol", 1) + `,`,
 		`ZonalIngress:` + strings.Replace(this.ZonalIngress.String(), "SeedSettingLoadBalancerServicesZonalIngress", "SeedSettingLoadBalancerServicesZonalIngress", 1) + `,`,
 		`Class:` + valueToStringGenerated(this.Class) + `,`,
+		`UDPIngress:` + strings.Replace(this.UDPIngress.String(), "SeedSettingLoadBalancerServicesUDPIngress", "SeedSettingLoadBalancerServicesUDPIngress", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *SeedSettingLoadBalancerServicesUDPIngress) String() string {
+	if this == nil {
+		return "nil"
+	}
+	keysForAnnotations := make([]string, 0, len(this.Annotations))
+	for k := range this.Annotations {
+		keysForAnnotations = append(keysForAnnotations, k)
+	}
+	sort.Strings(keysForAnnotations)
+	mapStringForAnnotations := "map[string]string{"
+	for _, k := range keysForAnnotations {
+		mapStringForAnnotations += fmt.Sprintf("%v: %v,", k, this.Annotations[k])
+	}
+	mapStringForAnnotations += "}"
+	s := strings.Join([]string{`&SeedSettingLoadBalancerServicesUDPIngress{`,
+		`Annotations:` + mapStringForAnnotations + `,`,
 		`}`,
 	}, "")
 	return s
@@ -50957,6 +51062,219 @@ func (m *SeedSettingLoadBalancerServices) Unmarshal(dAtA []byte) error {
 			}
 			s := string(dAtA[iNdEx:postIndex])
 			m.Class = &s
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UDPIngress", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.UDPIngress == nil {
+				m.UDPIngress = &SeedSettingLoadBalancerServicesUDPIngress{}
+			}
+			if err := m.UDPIngress.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SeedSettingLoadBalancerServicesUDPIngress) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SeedSettingLoadBalancerServicesUDPIngress: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SeedSettingLoadBalancerServicesUDPIngress: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Annotations", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Annotations == nil {
+				m.Annotations = make(map[string]string)
+			}
+			var mapkey string
+			var mapvalue string
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowGenerated
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= uint64(b&0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowGenerated
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var stringLenmapvalue uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowGenerated
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapvalue |= uint64(b&0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapvalue := int(stringLenmapvalue)
+					if intStringLenmapvalue < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
+					if postStringIndexmapvalue < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if postStringIndexmapvalue > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
+					iNdEx = postStringIndexmapvalue
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipGenerated(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if (skippy < 0) || (iNdEx+skippy) < 0 {
+						return ErrInvalidLengthGenerated
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.Annotations[mapkey] = mapvalue
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

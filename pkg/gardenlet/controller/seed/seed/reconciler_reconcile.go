@@ -587,6 +587,14 @@ func (r *Reconciler) runReconcileSeedFlow(
 		})
 	)
 
+	if c.vpnIngress != nil {
+		g.Add(flow.Task{
+			Name:         "Deploying VPN UDP Ingress",
+			Fn:           c.vpnIngress.Deploy,
+			Dependencies: flow.NewTaskIDs(syncPointReadyForSystemComponents),
+		})
+	}
+
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log:              log,
 		ProgressReporter: r.reportProgress(log, seed.GetInfo()),

@@ -57,6 +57,8 @@ const (
 	GatewayPort = 8132
 	// HTTPProxyGatewayPort is the port exposed by the istio ingress gateway to accept HTTP Connect proxy requests
 	HTTPProxyGatewayPort = 8443
+	// UDPProxyGatewayPort is the port exposed by the istio ingress gateway to accept UDP proxy requests
+	UDPProxyGatewayPort = 8443
 	// SecretNameTLSAuth is the name of seed server tlsauth Secret.
 	SecretNameTLSAuth = "vpn-seed-server-tlsauth" // #nosec G101 -- No credential.
 	deploymentName    = v1beta1constants.DeploymentNameVPNSeedServer
@@ -138,6 +140,9 @@ type Values struct {
 	// AutoMTU enables automatic MTU configuration for the VPN connection.
 	// When nil, the OPENVPN_AUTO_MTU environment variable is not set.
 	AutoMTU *bool
+	// UDPEnabled enables UDP-based transport instead of HTTP CONNECT proxy.
+	// When false, the server uses the HTTP CONNECT proxy (istio ingress) transport.
+	UDPEnabled bool
 }
 
 // New creates a new instance of DeployWaiter for the vpn-seed-server.
@@ -271,6 +276,54 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 		ipFamilies = append(ipFamilies, string(v))
 	}
 
+	portName := "tcp-tunnel"
+	portProtocol := corev1.ProtocolTCP
+	if v.values.UDPEnabled {
+		portName = "udp-tunnel"
+		portProtocol = corev1.ProtocolUDP
+	}
+
+	vpnEnv := []corev1.EnvVar{
+		{
+			Name:  "IP_FAMILIES",
+			Value: strings.Join(ipFamilies, ","),
+		},
+		{
+			Name:  "SHOOT_SERVICE_NETWORKS",
+			Value: netutils.JoinByComma(v.values.Network.ServiceCIDRs),
+		},
+		{
+			Name:  "SHOOT_POD_NETWORKS",
+			Value: netutils.JoinByComma(v.values.Network.PodCIDRs),
+		},
+		{
+			Name:  "SHOOT_NODE_NETWORKS",
+			Value: netutils.JoinByComma(v.values.Network.NodeCIDRs),
+		},
+		{
+			Name:  "SEED_POD_NETWORK",
+			Value: v.values.SeedPodNetwork,
+		},
+		{
+			Name: "LOCAL_NODE_IP",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "status.hostIP",
+				},
+			},
+		},
+		{
+			Name:  "OPENVPN_STATUS_PATH",
+			Value: filepath.Join(volumeMountPathStatusDir, "openvpn.status"),
+		},
+	}
+	if v.values.UDPEnabled {
+		vpnEnv = append(vpnEnv,
+			corev1.EnvVar{Name: "PROTOCOL", Value: "udp"},
+			corev1.EnvVar{Name: "UDPM_VERSION", Value: "v1"},
+		)
+	}
+
 	template := &corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: utils.MergeStringMaps(getLabels(), map[string]string{
@@ -304,45 +357,12 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, secretCAVPN, se
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Ports: []corev1.ContainerPort{
 						{
-							Name:          "tcp-tunnel",
+							Name:          portName,
 							ContainerPort: OpenVPNPort,
-							Protocol:      corev1.ProtocolTCP,
+							Protocol:      portProtocol,
 						},
 					},
-					Env: []corev1.EnvVar{
-						{
-							Name:  "IP_FAMILIES",
-							Value: strings.Join(ipFamilies, ","),
-						},
-						{
-							Name:  "SHOOT_SERVICE_NETWORKS",
-							Value: netutils.JoinByComma(v.values.Network.ServiceCIDRs),
-						},
-						{
-							Name:  "SHOOT_POD_NETWORKS",
-							Value: netutils.JoinByComma(v.values.Network.PodCIDRs),
-						},
-						{
-							Name:  "SHOOT_NODE_NETWORKS",
-							Value: netutils.JoinByComma(v.values.Network.NodeCIDRs),
-						},
-						{
-							Name:  "SEED_POD_NETWORK",
-							Value: v.values.SeedPodNetwork,
-						},
-						{
-							Name: "LOCAL_NODE_IP",
-							ValueFrom: &corev1.EnvVarSource{
-								FieldRef: &corev1.ObjectFieldSelector{
-									FieldPath: "status.hostIP",
-								},
-							},
-						},
-						{
-							Name:  "OPENVPN_STATUS_PATH",
-							Value: filepath.Join(volumeMountPathStatusDir, "openvpn.status"),
-						},
-					},
+					Env: vpnEnv,
 					ReadinessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
 							Exec: &corev1.ExecAction{
@@ -652,15 +672,21 @@ func (v *vpnSeedServer) deployService(ctx context.Context, idx *int) error {
 		metav1.SetMetaDataAnnotation(&service.ObjectMeta, resourcesv1alpha1.NetworkingPodLabelSelectorNamespaceAlias, v1beta1constants.LabelNetworkPolicyShootNamespaceAlias)
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyNamespaceSelectors(service,
 			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleIstioIngress}},
+			metav1.LabelSelector{MatchLabels: map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleVPNIngress}},
 			metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: v1beta1constants.LabelExposureClassHandlerName, Operator: metav1.LabelSelectorOpExists}}}))
 		utilruntime.Must(gardenerutils.InjectNetworkPolicyAnnotationsForScrapeTargets(service, networkingv1.NetworkPolicyPort{Port: new(intstr.FromInt32(metricsPort)), Protocol: new(corev1.ProtocolTCP)}))
 
 		service.Spec.Type = corev1.ServiceTypeClusterIP
+		servicePortProtocol := corev1.ProtocolTCP
+		if v.values.UDPEnabled {
+			servicePortProtocol = corev1.ProtocolUDP
+		}
 		service.Spec.Ports = []corev1.ServicePort{
 			{
 				Name:       deploymentName,
 				Port:       OpenVPNPort,
 				TargetPort: intstr.FromInt32(OpenVPNPort),
+				Protocol:   servicePortProtocol,
 			},
 			{
 				Name:       "http-proxy",

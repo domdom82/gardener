@@ -49,6 +49,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/networking/istiobasicauthserver"
 	vpnseedserver "github.com/gardener/gardener/pkg/component/networking/vpn/seedserver"
 	vpnshoot "github.com/gardener/gardener/pkg/component/networking/vpn/shoot"
+	vpnudpmux "github.com/gardener/gardener/pkg/component/networking/vpn/udpmux"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/machinecontrollermanager"
 	"github.com/gardener/gardener/pkg/component/nodemanagement/nodeproblemdetector"
@@ -111,6 +112,7 @@ type components struct {
 	dwdWeeder               component.DeployWaiter
 	dwdProber               component.DeployWaiter
 	istioBasicAuthServer    component.DeployWaiter
+	vpnIngress              vpnudpmux.Interface
 
 	kubeAPIServerService component.Deployer
 	kubeAPIServerIngress component.Deployer
@@ -241,6 +243,13 @@ func (r *Reconciler) instantiateComponents(
 		return
 	}
 
+	if features.DefaultFeatureGate.Enabled(features.VPNEnableUDPIngress) {
+		c.vpnIngress, err = r.newVPNIngress(seed)
+		if err != nil {
+			return
+		}
+	}
+
 	c.kubeAPIServerService = r.newKubeAPIServerService(wildCardCertSecret, c.istioDefaultNamespace)
 	c.kubeAPIServerIngress = r.newKubeAPIServerIngress(seed, wildCardCertSecret, c.istioDefaultLabels, c.istioDefaultNamespace)
 	c.ingressDNSRecord, err = r.newIngressDNSRecord(ctx, log, seed, "")
@@ -369,6 +378,7 @@ func (r *Reconciler) newIstio(ctx context.Context, seed *seedpkg.Seed, seedIsGar
 	servicePorts := []corev1.ServicePort{
 		{Name: "tcp", Port: 443, TargetPort: intstr.FromInt32(9443)},
 		{Name: "http-proxy", Port: vpnseedserver.HTTPProxyGatewayPort, TargetPort: intstr.FromInt(vpnseedserver.HTTPProxyGatewayPort)},
+		{Name: "udp-proxy", Port: vpnseedserver.UDPProxyGatewayPort, TargetPort: intstr.FromInt(vpnseedserver.UDPProxyGatewayPort), Protocol: "UDP"},
 	}
 
 	if httpProxyLegacyPortEnabled {
@@ -1159,4 +1169,19 @@ func (r *Reconciler) newKubeAPIServerIngress(seed *seedpkg.Seed, wildCardCertSec
 
 func (r *Reconciler) newExtensions(ctx context.Context, log logr.Logger, seed *seedpkg.Seed) (extension.Interface, error) {
 	return sharedcomponent.NewExtension(ctx, log, r.GardenClient, r.SeedClientSet.Client(), r.GardenNamespace, extensionsv1alpha1.ExtensionClassSeed, seed.GetInfo().Spec.Extensions, true)
+}
+
+func (r *Reconciler) newVPNIngress(seed *seedpkg.Seed) (vpnudpmux.Interface, error) {
+	image, err := imagevector.Containers().FindImage(imagevector.ContainerImageNameUdpMux)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find container image %q: %w", imagevector.ContainerImageNameUdpMux, err)
+	}
+	return vpnudpmux.New(r.SeedClientSet.Client(), vpnudpmux.Values{
+		Image:                   image.String(),
+		Namespace:               v1beta1constants.GardenRoleVPNIngress,
+		Replicas:                2,
+		LoadBalancerAnnotations: seed.GetLoadBalancerServiceUDPIngressAnnotations(),
+		LoadBalancerClass:       seed.GetLoadBalancerServiceClass(),
+		ExternalTrafficPolicy:   seed.GetLoadBalancerServiceExternalTrafficPolicy(),
+	}), nil
 }

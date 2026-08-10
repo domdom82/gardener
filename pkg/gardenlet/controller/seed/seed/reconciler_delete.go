@@ -431,6 +431,13 @@ func (r *Reconciler) runDeleteSeedFlow(
 		})
 	)
 
+	if c.vpnIngress != nil {
+		g.Add(flow.Task{
+			Name: "Destroying VPN UDP Ingress",
+			Fn:   c.vpnIngress.Destroy,
+		})
+	}
+
 	if err := g.Compile().Run(ctx, flow.Opts{
 		Log:              log,
 		ProgressReporter: r.reportProgress(log, seed.GetInfo()),
