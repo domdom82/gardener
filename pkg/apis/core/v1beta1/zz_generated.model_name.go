@@ -885,6 +885,11 @@ func (in SeedSettingLoadBalancerServices) OpenAPIModelName() string {
 }
 
 // OpenAPIModelName returns the OpenAPI model name for this type.
+func (in SeedSettingLoadBalancerServicesUDPIngress) OpenAPIModelName() string {
+	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.SeedSettingLoadBalancerServicesUDPIngress"
+}
+
+// OpenAPIModelName returns the OpenAPI model name for this type.
 func (in SeedSettingLoadBalancerServicesZonalIngress) OpenAPIModelName() string {
 	return "com.github.gardener.gardener.pkg.apis.core.v1beta1.SeedSettingLoadBalancerServicesZonalIngress"
 }

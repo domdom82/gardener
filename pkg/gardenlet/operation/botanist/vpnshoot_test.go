@@ -75,7 +75,7 @@ var _ = Describe("VPNShoot", func() {
 		})
 
 		It("should successfully create a vpnShoot interface for ReversedVPN", func() {
-			vpnShoot, err := botanist.DefaultVPNShoot()
+			vpnShoot, err := botanist.DefaultVPNShoot(context.TODO())
 			Expect(vpnShoot).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 		})

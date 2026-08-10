@@ -43,6 +43,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		VPAUpdateDisabled:                    b.Shoot.VPNVPAUpdateDisabled,
 		SeedPodNetwork:                       b.Seed.GetInfo().Spec.Networks.Pods,
 		AutoMTU:                              b.Shoot.VPNAutoMTU,
+		UDPEnabled:                           b.Shoot.VPNUDPEnabled,
 	}
 
 	if b.ShootUsesDNS() {

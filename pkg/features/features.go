@@ -80,6 +80,12 @@ const (
 	// alpha: v1.135.0
 	VPNBondingModeRoundRobin featuregate.Feature = "VPNBondingModeRoundRobin"
 
+	// VPNEnableUDPIngress enables a separate udp-mux Deployment in the vpn-ingress namespace
+	// with its own LoadBalancer Service for UDP ingress traffic to the VPN.
+	// owner: @domdom82
+	// alpha: v1.XX
+	VPNEnableUDPIngress featuregate.Feature = "VPNEnableUDPIngress"
+
 	// PrometheusHealthChecks enables care controllers to query Prometheus for enhanced health checks of monitoring components. Detected health issues
 	// are reported in the respective `Shoot`, `Seed`, or `Garden` resource.
 	// owner: @vicwicker @istvanballok
@@ -179,6 +185,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	VictoriaLogsBackend:            {Default: false, PreRelease: featuregate.Alpha},
 	CustomDNSServerInNodeLocalDNS:  {Default: true, PreRelease: featuregate.Beta},
 	VPNBondingModeRoundRobin:       {Default: false, PreRelease: featuregate.Alpha},
+	VPNEnableUDPIngress:            {Default: false, PreRelease: featuregate.Alpha},
 	PrometheusHealthChecks:         {Default: false, PreRelease: featuregate.Alpha},
 	VersionClassificationLifecycle: {Default: false, PreRelease: featuregate.Alpha},
 	RemoveVali:                     {Default: false, PreRelease: featuregate.Alpha},

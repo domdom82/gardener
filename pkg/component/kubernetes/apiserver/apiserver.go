@@ -211,6 +211,8 @@ type VPNConfig struct {
 	// AutoMTU enables automatic MTU configuration for the VPN connection.
 	// When nil, the OPENVPN_AUTO_MTU environment variable is not set.
 	AutoMTU *bool
+	// UDPEnabled enables UDP-based transport instead of HTTP CONNECT proxy.
+	UDPEnabled bool
 }
 
 // ServerCertificateConfig contains configuration for the server certificate.

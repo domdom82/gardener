@@ -162,6 +162,10 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 				allErrs = append(allErrs, kubernetescorevalidation.ValidateQualifiedName(*class, fldPath.Child("settings", "loadBalancerServices", "class"))...)
 			}
 
+			if seedSpec.Settings.LoadBalancerServices.UDPIngress != nil {
+				allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedSpec.Settings.LoadBalancerServices.UDPIngress.Annotations, fldPath.Child("settings", "loadBalancerServices", "udpIngress", "annotations"))...)
+			}
+
 			if policy := seedSpec.Settings.LoadBalancerServices.ExternalTrafficPolicy; policy != nil && !availableExternalTrafficPolicies.Has(string(*policy)) {
 				allErrs = append(allErrs, field.NotSupported(fldPath.Child("settings", "loadBalancerServices", "externalTrafficPolicy"), *policy, sets.List(availableExternalTrafficPolicies)))
 			}

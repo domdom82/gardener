@@ -302,6 +302,9 @@ type SeedSettingLoadBalancerServices struct {
 	// Class configures the Service.spec.loadBalancerClass field for the load balancer services on the seed.
 	// Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.
 	Class *string
+	// UDPIngress configures the load balancer for the vpn-ingress UDP gateway service.
+	// When unset, the global load balancer settings are used as fallback.
+	UDPIngress *SeedSettingLoadBalancerServicesUDPIngress
 }
 
 // SeedSettingLoadBalancerServicesZones controls settings, which are specific to the single-zone load balancers in a
@@ -337,6 +340,14 @@ type SeedSettingLoadBalancerServicesZonalIngress struct {
 	// When disabled, only a single ingress gateway is deployed.
 	// See https://github.com/gardener/gardener/blob/master/docs/operations/seed_settings.md#zonal-ingress.
 	Enabled *bool
+}
+
+// SeedSettingLoadBalancerServicesUDPIngress contains load balancer settings for the
+// vpn-ingress UDP gateway service. When unset, the global loadBalancerServices settings are used as fallback.
+type SeedSettingLoadBalancerServicesUDPIngress struct {
+	// Annotations is a map of annotations that will be injected/merged into the vpn-ingress load balancer
+	// service object. Overrides spec.settings.loadBalancerServices.annotations for this service.
+	Annotations map[string]string
 }
 
 // SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the

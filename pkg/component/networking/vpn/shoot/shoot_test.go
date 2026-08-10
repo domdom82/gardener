@@ -54,6 +54,7 @@ var _ = Describe("VPNShoot", func() {
 		managedResourceName = "shoot-core-vpn-shoot"
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
+		imageUdpProxy       = "some-udp-proxy-image:some-tag"
 
 		c        client.Client
 		sm       secretsmanager.Interface
@@ -69,11 +70,13 @@ var _ = Describe("VPNShoot", func() {
 		reversedVPNHeaderTemplate = "outbound|1194||vpn-seed-server-%d.shoot--project--shoot-name.svc.cluster.local"
 
 		values = Values{
-			Image: image,
+			Image:         image,
+			ImageUdpProxy: imageUdpProxy,
 			ReversedVPN: ReversedVPNValues{
-				Endpoint:   endPoint,
-				Header:     reversedVPNHeader,
-				IPFamilies: []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
+				Endpoint:    endPoint,
+				Header:      reversedVPNHeader,
+				Destination: "vpn-seed-server.some-namespace.svc.cluster.local",
+				IPFamilies:  []gardencorev1beta1.IPFamily{gardencorev1beta1.IPFamilyIPv4},
 			},
 			SeedPodNetwork: "10.1.0.0/16",
 			Network: NetworkValues{
@@ -442,15 +445,15 @@ var _ = Describe("VPNShoot", func() {
 					Name:      "vpn-shoot-tlsauth",
 					MountPath: "/srv/secrets/tlsauth",
 				})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{
+					Name:      "dev-net-tun",
+					MountPath: "/dev/net/tun",
+				})
 
 				env = append(env,
 					corev1.EnvVar{
 						Name:  "IP_FAMILIES",
 						Value: string(values.ReversedVPN.IPFamilies[0]),
-					},
-					corev1.EnvVar{
-						Name:  "ENDPOINT",
-						Value: endPoint,
 					},
 					corev1.EnvVar{
 						Name:  "OPENVPN_PORT",
@@ -486,13 +489,6 @@ var _ = Describe("VPNShoot", func() {
 					},
 				)
 
-				volumeMounts = append(volumeMounts,
-					corev1.VolumeMount{
-						Name:      "dev-net-tun",
-						MountPath: "/dev/net/tun",
-					},
-				)
-
 				if highAvailable {
 					env = append(env, []corev1.EnvVar{
 						{
@@ -513,6 +509,11 @@ var _ = Describe("VPNShoot", func() {
 						},
 					}...)
 				}
+
+				env = append(env, corev1.EnvVar{
+					Name:  "ENDPOINT",
+					Value: endPoint,
+				})
 
 				name := "vpn-shoot"
 				if index != nil {
