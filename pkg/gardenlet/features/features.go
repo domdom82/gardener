@@ -26,6 +26,7 @@ func GetFeatures() []featuregate.Feature {
 		features.VictoriaLogsBackend,
 		features.CustomDNSServerInNodeLocalDNS,
 		features.VPNBondingModeRoundRobin,
+		features.VPNEnableUDPIngress,
 		features.PrometheusHealthChecks,
 		features.RemoveVali,
 		features.DisableNginxIngressInSeed,

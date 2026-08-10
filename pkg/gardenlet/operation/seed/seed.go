@@ -187,6 +187,18 @@ func (s *Seed) GetLoadBalancerServiceExternalTrafficPolicy() *corev1.ServiceExte
 	return nil
 }
 
+// GetLoadBalancerServiceUDPIngressAnnotations returns the annotations for the vpn-ingress UDP LoadBalancer service.
+// Falls back to GetLoadBalancerServiceAnnotations when udpIngress is not configured.
+func (s *Seed) GetLoadBalancerServiceUDPIngressAnnotations() map[string]string {
+	seed := s.GetInfo()
+	if seed.Spec.Settings != nil &&
+		seed.Spec.Settings.LoadBalancerServices != nil &&
+		seed.Spec.Settings.LoadBalancerServices.UDPIngress != nil {
+		return utils.MergeStringMaps(seed.Spec.Settings.LoadBalancerServices.UDPIngress.Annotations)
+	}
+	return s.GetLoadBalancerServiceAnnotations()
+}
+
 // GetZonalLoadBalancerServiceAnnotations returns the zonal load balancer annotations set for the seed if any.
 func (s *Seed) GetZonalLoadBalancerServiceAnnotations(zone string) map[string]string {
 	seed := s.GetInfo()

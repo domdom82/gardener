@@ -280,6 +280,8 @@ const (
 	GardenRoleIstioSystem = "istio-system"
 	// GardenRoleIstioIngress is the value of the GardenRole key indicating type 'istio-ingress'.
 	GardenRoleIstioIngress = "istio-ingress"
+	// GardenRoleVPNIngress is the value of the GardenRole key indicating type 'vpn-ingress'.
+	GardenRoleVPNIngress = "vpn-ingress"
 	// GardenRoleProject is the value of GardenRole key indicating type 'project'.
 	GardenRoleProject = "project"
 	// GardenRoleControlPlane is the value of the GardenRole key indicating type 'controlplane'.
@@ -377,6 +379,12 @@ const (
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.
 	ShootAlphaControlPlaneVPNAutoMTU = "alpha.control-plane.shoot.gardener.cloud/vpn-auto-mtu"
+	// ShootAlphaControlPlaneVPNEnableUDP is a constant for an annotation on the Shoot resource to enable
+	// UDP-based VPN transport via the udp-mux ingress Deployment.
+	// Requires the VPNEnableUDPIngress feature gate on the gardenlet to be enabled.
+	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
+	// what you do.
+	ShootAlphaControlPlaneVPNEnableUDP = "alpha.control-plane.shoot.gardener.cloud/vpn-enable-udp"
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.

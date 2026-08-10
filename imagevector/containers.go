@@ -135,6 +135,10 @@ const (
 	ContainerImageNameTerminalControllerManager = "terminal-controller-manager"
 	// ContainerImageNameTune2fs is a constant for an image in the image vector with name 'tune2fs'.
 	ContainerImageNameTune2fs = "tune2fs"
+	// ContainerImageNameUdpMux is a constant for an image in the image vector with name 'udp-mux'.
+	ContainerImageNameUdpMux = "udp-mux"
+	// ContainerImageNameUdpProxy is a constant for an image in the image vector with name 'udp-proxy'.
+	ContainerImageNameUdpProxy = "udp-proxy"
 	// ContainerImageNameVali is a constant for an image in the image vector with name 'vali'.
 	ContainerImageNameVali = "vali"
 	// ContainerImageNameValiCurator is a constant for an image in the image vector with name 'vali-curator'.

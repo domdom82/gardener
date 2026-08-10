@@ -25,7 +25,7 @@ func (b *Botanist) instantiateComponents(ctx context.Context) (err error) {
 		return fmt.Errorf("failed to instantiate extension components: %w", err)
 	}
 
-	if err := b.instantiateComponentsSystem(); err != nil {
+	if err := b.instantiateComponentsSystem(ctx); err != nil {
 		return fmt.Errorf("failed to instantiate system components: %w", err)
 	}
 
@@ -169,7 +169,7 @@ func (b *Botanist) instantiateComponentsObservability() (err error) {
 	return nil
 }
 
-func (b *Botanist) instantiateComponentsSystem() (err error) {
+func (b *Botanist) instantiateComponentsSystem(ctx context.Context) (err error) {
 	b.Shoot.Components.SystemComponents.APIServerProxy, err = b.DefaultAPIServerProxy()
 	if err != nil {
 		return err
@@ -205,7 +205,7 @@ func (b *Botanist) instantiateComponentsSystem() (err error) {
 		return err
 	}
 	b.Shoot.Components.SystemComponents.Resources = b.DefaultShootSystem()
-	b.Shoot.Components.SystemComponents.VPNShoot, err = b.DefaultVPNShoot()
+	b.Shoot.Components.SystemComponents.VPNShoot, err = b.DefaultVPNShoot(ctx)
 	if err != nil {
 		return err
 	}

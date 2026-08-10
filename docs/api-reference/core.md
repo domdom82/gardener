@@ -11047,6 +11047,57 @@ string
 <p>Class configures the Service.spec.loadBalancerClass field for the load balancer services on the seed.<br />Note that changing the loadBalancerClass of existing LoadBalancer services is denied by Kubernetes.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>udpIngress</code></br>
+<em>
+<a href="#seedsettingloadbalancerservicesudpingress">SeedSettingLoadBalancerServicesUDPIngress</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UDPIngress configures the load balancer for the vpn-ingress UDP gateway service.<br />When unset, the global load balancer settings are used as fallback.</p>
+</td>
+</tr>
+
+</tbody>
+</table>
+
+
+<h3 id="seedsettingloadbalancerservicesudpingress">SeedSettingLoadBalancerServicesUDPIngress
+</h3>
+
+
+<p>
+(<em>Appears on:</em><a href="#seedsettingloadbalancerservices">SeedSettingLoadBalancerServices</a>)
+</p>
+
+<p>
+SeedSettingLoadBalancerServicesUDPIngress contains load balancer settings for the
+vpn-ingress UDP gateway service. When unset, the global loadBalancerServices settings are used as fallback.
+</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+
+<tr>
+<td>
+<code>annotations</code></br>
+<em>
+object (keys:string, values:string)
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Annotations is a map of annotations that will be injected/merged into the vpn-ingress load balancer<br />service object. Overrides spec.settings.loadBalancerServices.annotations for this service.</p>
+</td>
+</tr>
 
 </tbody>
 </table>
